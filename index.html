@@ -1,0 +1,2293 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>时间记录表</title>
+
+<!-- PWA / 手机桌面图标 -->
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="favicon.ico">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="时间记录">
+<meta name="theme-color" content="#4f46e5">
+<meta name="mobile-web-app-capable" content="yes">
+<style>
+  :root {
+    --primary: #4f46e5;
+    --primary-light: #6366f1;
+    --primary-bg: #eef2ff;
+    --success: #10b981;
+    --success-bg: #ecfdf5;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+    --danger-bg: #fef2f2;
+    --bg: #f1f5f9;
+    --card: #ffffff;
+    --text: #1e293b;
+    --text-light: #64748b;
+    --border: #e2e8f0;
+    --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+    --shadow-lg: 0 10px 30px rgba(0,0,0,0.08), 0 3px 10px rgba(0,0,0,0.04);
+    --radius: 12px;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  /* ===== Header ===== */
+  .header {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    color: white;
+    padding: 20px 24px;
+    box-shadow: 0 4px 20px rgba(79,70,229,0.25);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .header-inner {
+    max-width: 960px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .header h1 {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+  .header .clock {
+    font-size: 14px;
+    opacity: 0.9;
+    font-variant-numeric: tabular-nums;
+  }
+  .header-actions { display:flex; gap:8px; }
+  .header-btn {
+    background: rgba(255,255,255,0.18);
+    border: 1px solid rgba(255,255,255,0.25);
+    color: white;
+    padding: 6px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: background .2s;
+  }
+  .header-btn:hover { background: rgba(255,255,255,0.3); }
+
+  /* ===== Tabs ===== */
+  .tabs {
+    max-width: 960px;
+    margin: 20px auto 0;
+    padding: 0 16px;
+    display: flex;
+    gap: 4px;
+    background: transparent;
+  }
+  .tab {
+    padding: 10px 20px;
+    border: none;
+    background: var(--card);
+    color: var(--text-light);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    border-radius: 10px 10px 0 0;
+    transition: all .2s;
+    border-bottom: 3px solid transparent;
+  }
+  .tab:hover { color: var(--primary); }
+  .tab.active {
+    color: var(--primary);
+    border-bottom-color: var(--primary);
+    font-weight: 600;
+  }
+
+  /* ===== Container ===== */
+  .container {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 0 16px 40px;
+  }
+
+  /* ===== Cards ===== */
+  .card {
+    background: var(--card);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  .card-title {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .card-title .icon { font-size: 20px; }
+
+  /* ===== Form Elements ===== */
+  .form-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: flex-end;
+  }
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .form-group label {
+    font-size: 12px;
+    color: var(--text-light);
+    font-weight: 500;
+  }
+  input[type="text"], input[type="time"], input[type="date"], textarea, select {
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 14px;
+    font-family: inherit;
+    color: var(--text);
+    background: white;
+    transition: border-color .2s;
+    outline: none;
+  }
+  input:focus, textarea:focus, select:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(79,70,229,0.1);
+  }
+  input[type="text"] { min-width: 200px; }
+  textarea {
+    width: 100%;
+    min-height: 80px;
+    resize: vertical;
+    line-height: 1.6;
+  }
+
+  /* ===== Buttons ===== */
+  .btn {
+    padding: 8px 18px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all .2s;
+    font-family: inherit;
+    white-space: nowrap;
+  }
+  .btn-primary { background: var(--primary); color: white; }
+  .btn-primary:hover { background: var(--primary-light); transform: translateY(-1px); }
+  .btn-success { background: var(--success); color: white; }
+  .btn-success:hover { background: #059669; }
+  .btn-danger { background: var(--danger); color: white; }
+  .btn-danger:hover { background: #dc2626; }
+  .btn-ghost { background: transparent; color: var(--text-light); border: 1.5px solid var(--border); }
+  .btn-ghost:hover { border-color: var(--primary); color: var(--primary); }
+  .btn-sm { padding: 4px 10px; font-size: 12px; }
+
+  /* ===== Timer Card ===== */
+  .timer-card {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    color: white;
+  }
+  .timer-card .card-title { color: white; }
+  .timer-display {
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    gap: 36px;
+    padding: 14px 0 6px;
+  }
+  .tm-part {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .tm-val {
+    font-size: 52px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+    letter-spacing: 1px;
+  }
+  .tm-lbl {
+    font-size: 13px;
+    opacity: 0.7;
+    margin-top: 6px;
+    letter-spacing: 1px;
+  }
+  .tm-colon {
+    font-size: 42px;
+    font-weight: 700;
+    opacity: 0.4;
+    line-height: 1;
+    padding-bottom: 22px;
+  }
+  .timer-label {
+    text-align: center;
+    font-size: 13px;
+    opacity: 0.85;
+    margin-bottom: 12px;
+  }
+  .timer-inputs {
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 12px;
+  }
+  .timer-inputs label { font-size: 12px; opacity:0.85; }
+  .timer-inputs input {
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.25);
+    color: white;
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 14px;
+  }
+  .timer-inputs input::placeholder { color: rgba(255,255,255,0.6); }
+  .timer-inputs input:focus { border-color: rgba(255,255,255,0.5); box-shadow:none; }
+  .timer-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-top: 14px;
+  }
+  .timer-btn {
+    padding: 10px 28px;
+    border: none;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .2s;
+  }
+  .timer-btn.start { background: white; color: var(--primary); }
+  .timer-btn.start:hover { transform: scale(1.05); }
+  .timer-btn.stop { background: #fee2e2; color: var(--danger); }
+  .timer-btn.stop:hover { transform: scale(1.05); }
+
+  /* ===== Record List ===== */
+  .record-list { list-style: none; }
+  .record-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    background: #f8fafc;
+    margin-bottom: 8px;
+    transition: background .2s;
+    border: 1px solid transparent;
+  }
+  .record-item:hover { background: #f1f5f9; border-color: var(--border); }
+  .record-time {
+    font-variant-numeric: tabular-nums;
+    font-size: 13px;
+    color: var(--text-light);
+    min-width: 130px;
+    font-weight: 500;
+  }
+  .record-task {
+    flex: 1;
+    font-size: 14px;
+  }
+  .record-main { flex: 1; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+  .record-desc {
+    font-size: 12px;
+    color: var(--text-light);
+    line-height: 1.45;
+    word-break: break-all;
+  }
+  .record-desc::before { content: '📝 '; }
+  .record-duration {
+    font-variant-numeric: tabular-nums;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--primary);
+    background: var(--primary-bg);
+    padding: 3px 10px;
+    border-radius: 6px;
+    min-width: 60px;
+    text-align: center;
+  }
+  .record-delete {
+    background: none;
+    border: none;
+    color: var(--text-light);
+    cursor: pointer;
+    font-size: 16px;
+    padding: 4px 8px;
+    border-radius: 6px;
+    transition: all .2s;
+  }
+  .record-delete:hover { background: var(--danger-bg); color: var(--danger); }
+
+  /* ===== Stats ===== */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .stat-box {
+    background: #f8fafc;
+    border-radius: 10px;
+    padding: 14px 16px;
+    text-align: center;
+  }
+  .stat-value {
+    font-size: 26px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--primary);
+  }
+  .stat-label {
+    font-size: 12px;
+    color: var(--text-light);
+    margin-top: 2px;
+  }
+
+  /* ===== Bar Chart (simple) ===== */
+  .bar-chart { margin-top: 8px; }
+  .bar-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 6px;
+    font-size: 13px;
+  }
+  .bar-label { width: 90px; text-align: right; color: var(--text-light); flex-shrink:0; }
+  .bar-track {
+    flex: 1;
+    height: 22px;
+    background: #f1f5f9;
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #6366f1, #8b5cf6);
+    border-radius: 6px;
+    transition: width .5s ease;
+    min-width: 2px;
+  }
+  .bar-value {
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    min-width: 50px;
+    color: var(--text);
+  }
+
+  /* ===== Reminder ===== */
+  .reminder-perm {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 14px;
+    background: #fffbeb;
+    border: 0.5px solid #fde68a;
+    border-radius: var(--border-radius-md);
+    margin-bottom: 14px;
+    font-size: 13px;
+    color: #92400e;
+  }
+  .reminder-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+  }
+  .reminder-group-title {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 10px;
+    color: var(--text);
+  }
+  .reminder-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border: 0.5px solid var(--border);
+    border-radius: var(--border-radius-md);
+    margin-bottom: 8px;
+    background: var(--card);
+  }
+  .reminder-item.urgent {
+    border-color: #fca5a5;
+    background: #fef2f2;
+  }
+  .reminder-item.done {
+    opacity: 0.55;
+  }
+  .reminder-item.done .reminder-title {
+    text-decoration: line-through;
+  }
+  .reminder-main {
+    flex: 1;
+    min-width: 0;
+  }
+  .reminder-title {
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--text);
+  }
+  .reminder-meta {
+    font-size: 12px;
+    color: var(--text-light);
+    margin-top: 3px;
+  }
+  .reminder-countdown {
+    font-size: 12px;
+    font-weight: 600;
+    color: #6366f1;
+    margin-top: 2px;
+  }
+  .reminder-item.urgent .reminder-countdown { color: #dc2626; }
+  .reminder-actions {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+  .reminder-actions button {
+    padding: 5px 10px;
+    font-size: 12px;
+    border: 0.5px solid var(--border);
+    border-radius: 6px;
+    background: var(--card);
+    cursor: pointer;
+    color: var(--text);
+  }
+  .reminder-actions button:hover { background: var(--bg); }
+  .reminder-actions .btn-done:hover { color: #16a34a; border-color: #86efac; }
+  .reminder-actions .btn-del:hover { color: #dc2626; border-color: #fca5a5; }
+  .reminder-empty {
+    text-align: center;
+    color: var(--text-light);
+    font-size: 13px;
+    padding: 20px;
+  }
+  /* ===== Task Breakdown ===== */
+  .task-bd {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+  }
+  .task-bd-title {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 10px;
+    color: var(--text);
+  }
+  .task-bd-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+    font-size: 13px;
+  }
+  .task-bd-name {
+    width: 120px;
+    flex-shrink: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--text);
+    font-weight: 500;
+  }
+  .task-bd-track {
+    flex: 1;
+    height: 24px;
+    background: #f1f5f9;
+    border-radius: 6px;
+    overflow: hidden;
+    position: relative;
+  }
+  .task-bd-fill {
+    height: 100%;
+    border-radius: 6px;
+    transition: width .5s ease;
+    min-width: 2px;
+  }
+  .task-bd-pct {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-light);
+  }
+  .task-bd-info {
+    min-width: 90px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+  .task-bd-time {
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    font-size: 13px;
+  }
+  .task-bd-count {
+    font-size: 11px;
+    color: var(--text-light);
+  }
+  .rank-badge {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700;
+    flex-shrink: 0;
+  }
+  .rank-1 { background: #fef3c7; color: #d97706; }
+  .rank-2 { background: #e2e8f0; color: #475569; }
+  .rank-3 { background: #fed7aa; color: #c2410c; }
+  .rank-other { background: #f1f5f9; color: var(--text-light); }
+
+  /* ===== Reflection ===== */
+  .reflection-box { margin-top: 16px; }
+  .reflection-box label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 8px;
+    display: block;
+  }
+  .reflection-box .save-hint {
+    font-size: 12px;
+    color: var(--success);
+    margin-top: 6px;
+    opacity: 0;
+    transition: opacity .3s;
+  }
+  .reflection-box .save-hint.show { opacity: 1; }
+
+  /* ===== Empty State ===== */
+  .empty {
+    text-align: center;
+    padding: 30px;
+    color: var(--text-light);
+    font-size: 14px;
+  }
+
+  /* ===== Date Nav ===== */
+  .date-nav {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .date-nav .nav-btn {
+    width: 34px; height: 34px;
+    border-radius: 8px;
+    border: 1.5px solid var(--border);
+    background: white;
+    cursor: pointer;
+    font-size: 16px;
+    color: var(--text-light);
+    display: flex; align-items: center; justify-content: center;
+    transition: all .2s;
+  }
+  .date-nav .nav-btn:hover { border-color: var(--primary); color: var(--primary); }
+
+  /* ===== Section hidden ===== */
+  .section { display: none; }
+  .section.active { display: block; }
+
+  /* ===== Toast ===== */
+  .toast {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--text);
+    color: white;
+    padding: 10px 24px;
+    border-radius: 10px;
+    font-size: 14px;
+    z-index: 999;
+    transition: transform .3s;
+    pointer-events: none;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* ===== Sync Modal ===== */
+  .sync-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+  }
+  .sync-overlay.show { display: flex; }
+  .sync-modal {
+    background: white;
+    border-radius: 16px;
+    width: 90%;
+    max-width: 420px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+    overflow: hidden;
+  }
+  .sync-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .sync-modal-header h3 { font-size: 17px; font-weight: 600; }
+  .sync-close {
+    background: none; border: none; font-size: 18px;
+    cursor: pointer; color: var(--text-light); padding: 4px 8px;
+    border-radius: 6px;
+  }
+  .sync-close:hover { background: #f1f5f9; }
+  .sync-modal-body { padding: 20px; }
+  .sync-info {
+    background: var(--primary-bg);
+    border-radius: 10px;
+    padding: 14px;
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.7;
+    margin-bottom: 16px;
+  }
+  .sync-code-box {
+    background: #f8fafc;
+    border: 1.5px dashed var(--border);
+    border-radius: 10px;
+    padding: 14px;
+    text-align: center;
+    margin-bottom: 12px;
+  }
+  .sync-code-box .label { font-size: 12px; color: var(--text-light); margin-bottom: 6px; }
+  .sync-code-box .code {
+    font-size: 16px; font-weight: 600; color: var(--primary);
+    font-family: monospace; word-break: break-all;
+  }
+  .sync-link-box {
+    background: #f8fafc;
+    border-radius: 10px;
+    padding: 12px;
+    margin-bottom: 12px;
+    font-size: 12px;
+    color: var(--text-light);
+    word-break: break-all;
+  }
+  .sync-status-row {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13px; color: var(--text-light);
+    margin-bottom: 16px;
+  }
+  .sync-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--success);
+  }
+  .sync-dot.offline { background: var(--text-light); }
+  .sync-btn-row { display: flex; gap: 10px; flex-wrap: wrap; }
+  .sync-input-row {
+    display: flex; gap: 8px; margin-top: 12px;
+  }
+  .sync-input-row input {
+    flex: 1; font-size: 13px; font-family: monospace;
+  }
+
+  /* ===== Responsive ===== */
+  @media (max-width: 600px) {
+    .header h1 { font-size: 18px; }
+    .tabs { padding: 0 8px; }
+    .tab { padding: 8px 12px; font-size: 13px; }
+    .record-time { min-width: 110px; }
+    .tm-val { font-size: 40px; }
+    .timer-display { gap: 24px; }
+    .tm-colon { font-size: 32px; padding-bottom: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== Header ===== -->
+<div class="header">
+  <div class="header-inner">
+    <div>
+      <h1>⏱ 时间记录表</h1>
+      <div class="clock" id="liveClock">--</div>
+    </div>
+    <div class="header-actions">
+      <button class="header-btn" id="syncBtn" onclick="openSyncModal()">☁️ 云同步</button>
+      <button class="header-btn" onclick="exportData()">导出备份</button>
+      <button class="header-btn" onclick="document.getElementById('importFile').click()">导入恢复</button>
+      <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
+    </div>
+  </div>
+</div>
+
+<!-- ===== Tabs ===== -->
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('today', this)">📋 今日记录</button>
+  <button class="tab" onclick="switchTab('daily', this)">📅 每日总结</button>
+  <button class="tab" onclick="switchTab('weekly', this)">📆 每周总结</button>
+  <button class="tab" onclick="switchTab('monthly', this)">🗓 每月总结</button>
+  <button class="tab" onclick="switchTab('stats', this)">📊 任务统计</button>
+  <button class="tab" onclick="switchTab('reminder', this)">⏰ 提醒</button>
+</div>
+
+<div class="container">
+
+  <!-- ===== Today Section ===== -->
+  <div class="section active" id="section-today">
+
+    <!-- Timer Card -->
+    <div class="card timer-card">
+      <div class="card-title"><span class="icon">⏱</span> 快速计时</div>
+      <div class="timer-display" id="timerDisplay">
+        <div class="tm-part"><span class="tm-val" id="timerH">00</span><span class="tm-lbl">小时</span></div>
+        <span class="tm-colon">:</span>
+        <div class="tm-part"><span class="tm-val" id="timerM">00</span><span class="tm-lbl">分钟</span></div>
+      </div>
+      <div class="timer-label" id="timerLabel">点击「开始」记录当前时间，结束时点击「停止」自动计算耗时</div>
+      <div class="timer-inputs">
+        <div class="form-group" style="flex:1; min-width:150px;">
+          <label>事项</label>
+          <input type="text" id="timerTask" list="taskSuggestions" placeholder="正在做什么？（常用事项可下拉选择）" style="min-width:150px">
+        </div>
+        <div class="form-group" style="flex:1; min-width:150px;">
+          <label>说明</label>
+          <input type="text" id="timerDesc" placeholder="内容/注意点（可选）" style="min-width:150px">
+        </div>
+      </div>
+      <div class="timer-actions">
+        <button class="timer-btn start" id="timerStartBtn" onclick="startTimer()">开始</button>
+        <button class="timer-btn stop" id="timerStopBtn" onclick="stopTimer()" style="display:none">停止并保存</button>
+      </div>
+    </div>
+
+    <!-- 常用事项下拉补全数据源（≥3次自动收录） -->
+    <datalist id="taskSuggestions"></datalist>
+
+    <!-- Manual Add Card -->
+    <div class="card">
+      <div class="card-title"><span class="icon">✏️</span> 手动添加记录</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>开始时间</label>
+          <input type="time" id="addStart" value="09:00">
+        </div>
+        <div class="form-group">
+          <label>结束时间</label>
+          <input type="time" id="addEnd" value="10:00">
+        </div>
+        <div class="form-group" style="flex:1; min-width:150px;">
+          <label>事项</label>
+          <input type="text" id="addTask" list="taskSuggestions" placeholder="做了什么？" style="width:100%">
+        </div>
+        <div class="form-group" style="flex:1; min-width:150px;">
+          <label>说明</label>
+          <input type="text" id="addDesc" placeholder="内容/注意点（可选）" style="width:100%">
+        </div>
+        <button class="btn btn-primary" onclick="addManualRecord()">添加</button>
+      </div>
+      <div id="addDurationHint" style="font-size:12px;color:var(--text-light);margin-top:8px;"></div>
+    </div>
+
+    <!-- Today's Records -->
+    <div class="card">
+      <div class="card-title">
+        <span class="icon">📋</span> 今日记录
+        <span style="margin-left:auto;font-size:13px;font-weight:400;color:var(--text-light)" id="todayDateLabel"></span>
+      </div>
+      <div class="stats-grid" id="todayStats"></div>
+      <ul class="record-list" id="todayList"></ul>
+    </div>
+  </div>
+
+  <!-- ===== Daily Summary Section ===== -->
+  <div class="section" id="section-daily">
+    <div class="card">
+      <div class="card-title"><span class="icon">📅</span> 每日总结</div>
+      <div class="date-nav">
+        <button class="nav-btn" onclick="shiftDay(-1)">‹</button>
+        <input type="date" id="dailyDate" onchange="renderDaily()">
+        <button class="nav-btn" onclick="shiftDay(1)">›</button>
+        <button class="btn btn-ghost btn-sm" onclick="dailyDateToToday()" style="margin-left:auto">回到今天</button>
+      </div>
+      <div class="stats-grid" id="dailyStats"></div>
+      <ul class="record-list" id="dailyList"></ul>
+      <div id="dailyTaskBreakdown"></div>
+
+      <div class="reflection-box">
+        <label>📝 当日总结与反思</label>
+        <textarea id="dailyReflection" placeholder="今天完成了什么？有什么收获？哪些地方可以改进？" oninput="saveReflection('daily', this.value)"></textarea>
+        <div class="save-hint" id="dailySaveHint">已自动保存 ✓</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Weekly Summary Section ===== -->
+  <div class="section" id="section-weekly">
+    <div class="card">
+      <div class="card-title"><span class="icon">📆</span> 每周总结</div>
+      <div class="date-nav">
+        <button class="nav-btn" onclick="shiftWeek(-1)">‹</button>
+        <select id="weekSelect" onchange="renderWeekly()" style="min-width:200px"></select>
+        <button class="nav-btn" onclick="shiftWeek(1)">›</button>
+      </div>
+      <div class="stats-grid" id="weeklyStats"></div>
+      <div id="weeklyChart"></div>
+      <div id="weeklyTaskBreakdown"></div>
+
+      <div class="reflection-box">
+        <label>📝 本周总结与反思</label>
+        <textarea id="weeklyReflection" placeholder="本周目标完成情况？时间分配是否合理？下周需要调整什么？" oninput="saveReflection('weekly', this.value)"></textarea>
+        <div class="save-hint" id="weeklySaveHint">已自动保存 ✓</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Monthly Summary Section ===== -->
+  <div class="section" id="section-monthly">
+    <div class="card">
+      <div class="card-title"><span class="icon">🗓</span> 每月总结</div>
+      <div class="date-nav">
+        <button class="nav-btn" onclick="shiftMonth(-1)">‹</button>
+        <select id="monthSelect" onchange="renderMonthly()" style="min-width:160px"></select>
+        <button class="nav-btn" onclick="shiftMonth(1)">›</button>
+      </div>
+      <div class="stats-grid" id="monthlyStats"></div>
+      <div id="monthlyChart"></div>
+      <div id="monthlyTaskBreakdown"></div>
+
+      <div class="reflection-box">
+        <label>📝 本月总结与反思</label>
+        <textarea id="monthlyReflection" placeholder="本月整体回顾：成就、不足、下月计划" oninput="saveReflection('monthly', this.value)"></textarea>
+        <div class="save-hint" id="monthlySaveHint">已自动保存 ✓</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Task Stats Section ===== -->
+  <div class="section" id="section-stats">
+    <div class="card">
+      <div class="card-title"><span class="icon">📊</span> 任务统计</div>
+      <div class="date-nav">
+        <select id="statsRange" onchange="renderStats()" style="min-width:140px">
+          <option value="all">全部时间</option>
+          <option value="month">本月</option>
+          <option value="week">本周</option>
+          <option value="7d">最近7天</option>
+          <option value="30d">最近30天</option>
+        </select>
+      </div>
+      <div class="stats-grid" id="statsSummary"></div>
+      <div id="statsRanking"></div>
+    </div>
+  </div>
+
+  <!-- ===== Reminder Section ===== -->
+  <div class="section" id="section-reminder">
+    <div class="card">
+      <div class="card-title"><span class="icon">⏰</span> 定时提醒</div>
+
+      <div id="reminderPermBox" class="reminder-perm" style="display:none">
+        <span id="reminderPermText"></span>
+        <button class="header-btn" id="reminderPermBtn" onclick="requestNotifyPerm()">🔔 开启提醒通知</button>
+      </div>
+
+      <div class="reminder-form">
+        <input type="text" id="remTitle" placeholder="提醒事项（如：线上会议）" style="flex:1;min-width:120px">
+        <input type="datetime-local" id="remDatetime" style="min-width:170px">
+        <input type="text" id="remNote" placeholder="备注（可选）" style="flex:1;min-width:100px">
+        <button class="btn btn-primary" onclick="addReminder()">添加提醒</button>
+      </div>
+
+      <div style="margin-top:18px">
+        <div class="reminder-group-title" id="remUpcomingTitle">📌 待提醒</div>
+        <div id="remUpcoming"></div>
+      </div>
+      <div style="margin-top:18px">
+        <div class="reminder-group-title" style="color:var(--text-light)">✓ 已完成 / 已过期</div>
+        <div id="remDone"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ===== Sync Modal ===== -->
+<div class="sync-overlay" id="syncOverlay" onclick="if(event.target===this)closeSyncModal()">
+  <div class="sync-modal">
+    <div class="sync-modal-header">
+      <h3>☁️ 云同步</h3>
+      <button class="sync-close" onclick="closeSyncModal()">✕</button>
+    </div>
+    <div class="sync-modal-body" id="syncModalBody"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ========================================
+//  数据层 — localStorage
+// ========================================
+const STORAGE_KEY = 'timeTrackerData';
+
+function loadData() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const d = JSON.parse(raw);
+      if (!d.reminders) d.reminders = [];
+      if (!d.reflections) d.reflections = { daily:{}, weekly:{}, monthly:{} };
+      if (!d.records) d.records = {};
+      return d;
+    }
+  } catch(e) { console.error('加载数据失败', e); }
+  return { records: {}, reflections: { daily:{}, weekly:{}, monthly:{} }, reminders: [] };
+}
+function saveData(data) {
+  data.lastModified = Date.now();
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  // 如果云同步已开启，上传到云端
+  if (syncState.code) {
+    uploadSync();
+  }
+}
+let DB = loadData();
+
+// ========================================
+//  工具函数
+// ========================================
+function todayStr() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+
+// 时间字符串 "HH:MM" → 分钟数
+function timeToMin(t) {
+  if (!t || !t.includes(':')) return 0;
+  const [h, m] = t.split(':').map(Number);
+  return h * 60 + m;
+}
+// 分钟数 → 可读时长 "2小时30分" 或 "45分"
+function minToText(min) {
+  if (min <= 0) return '0分';
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  if (h > 0 && m > 0) return h + '小时' + m + '分';
+  if (h > 0) return h + '小时';
+  return m + '分';
+}
+// 分钟数 → "HH:MM" 格式
+function minToTime(min) {
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  return String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0');
+}
+// 秒数 → "HH:MM:SS"
+function secToHMS(sec) {
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = sec % 60;
+  return [h,m,s].map(n => String(n).padStart(2,'0')).join(':');
+}
+// 计算耗时（分钟），支持跨天
+function calcDuration(start, end) {
+  let s = timeToMin(start);
+  let e = timeToMin(end);
+  if (e < s) e += 24 * 60; // 跨天
+  return e - s;
+}
+// 获取周一日期
+function getMonday(date) {
+  const d = new Date(date);
+  const day = d.getDay();
+  const diff = day === 0 ? -6 : 1 - day; // 周日算到上周
+  d.setDate(d.getDate() + diff);
+  return d;
+}
+// 日期加减天数
+function addDays(dateStr, n) {
+  const d = new Date(dateStr);
+  d.setDate(d.getDate() + n);
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+// 获取某日期所在周的 key（基于周一日期）
+function getWeekKey(dateStr) {
+  const mon = getMonday(dateStr);
+  return mon.getFullYear() + '-' + String(mon.getMonth()+1).padStart(2,'0') + '-' + String(mon.getDate()).padStart(2,'0');
+}
+// 获取某日期所在月的 key "YYYY-MM"
+function getMonthKey(dateStr) {
+  return dateStr.slice(0, 7);
+}
+// 周区间文本
+function weekRangeText(weekKey) {
+  const mon = new Date(weekKey);
+  const sun = new Date(mon);
+  sun.setDate(sun.getDate() + 6);
+  return (mon.getMonth()+1) + '/' + mon.getDate() + ' - ' + (sun.getMonth()+1) + '/' + sun.getDate();
+}
+// 获取一周7天的日期
+function getWeekDates(weekKey) {
+  const dates = [];
+  const mon = new Date(weekKey);
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(mon);
+    d.setDate(d.getDate() + i);
+    dates.push(d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'));
+  }
+  return dates;
+}
+
+// Toast 提示
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => el.classList.remove('show'), 2000);
+}
+
+// ========================================
+//  Tab 切换
+// ========================================
+function switchTab(name, btn) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('section-' + name).classList.add('active');
+  btn.classList.add('active');
+  if (name === 'daily') renderDaily();
+  if (name === 'weekly') renderWeekly();
+  if (name === 'monthly') renderMonthly();
+  if (name === 'stats') renderStats();
+  if (name === 'reminder') {
+    renderReminders();
+    const dt = document.getElementById('remDatetime');
+    if (!dt.value) {
+      const t = new Date(Date.now() + 3600000);
+      dt.value = t.getFullYear() + '-' + String(t.getMonth()+1).padStart(2,'0') + '-' + String(t.getDate()).padStart(2,'0') + 'T' + String(t.getHours()).padStart(2,'0') + ':' + String(t.getMinutes()).padStart(2,'0');
+    }
+  }
+}
+
+// ========================================
+//  实时时钟
+// ========================================
+function updateClock() {
+  const d = new Date();
+  const weekdays = ['日','一','二','三','四','五','六'];
+  const str = d.getFullYear() + '年' + (d.getMonth()+1) + '月' + d.getDate() + '日 周' + weekdays[d.getDay()] + '  ' +
+    [d.getHours(), d.getMinutes(), d.getSeconds()].map(n => String(n).padStart(2,'0')).join(':');
+  document.getElementById('liveClock').textContent = str;
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ========================================
+//  计时器
+// ========================================
+let timerState = { running: false, startTime: null, task: '', elapsed: 0, intervalId: null };
+
+function startTimer() {
+  const task = document.getElementById('timerTask').value.trim();
+  if (!task) { toast('请先输入事项'); document.getElementById('timerTask').focus(); return; }
+  timerState.running = true;
+  timerState.startTime = new Date();
+  timerState.task = task;
+  timerState.desc = document.getElementById('timerDesc').value.trim();
+  timerState.elapsed = 0;
+  document.getElementById('timerStartBtn').style.display = 'none';
+  document.getElementById('timerStopBtn').style.display = 'inline-block';
+  document.getElementById('timerLabel').textContent = '正在记录：「' + task + '」  开始于 ' + formatNow(timerState.startTime);
+  timerState.intervalId = setInterval(() => {
+    timerState.elapsed = Math.floor((new Date() - timerState.startTime) / 1000);
+    document.getElementById('timerH').textContent = String(Math.floor(timerState.elapsed / 3600)).padStart(2,'0');
+    document.getElementById('timerM').textContent = String(Math.floor((timerState.elapsed % 3600) / 60)).padStart(2,'0');
+  }, 1000);
+}
+function stopTimer() {
+  if (!timerState.running) return;
+  clearInterval(timerState.intervalId);
+  const startT = timerState.startTime;
+  const endT = new Date();
+  const startTimeStr = String(startT.getHours()).padStart(2,'0') + ':' + String(startT.getMinutes()).padStart(2,'0');
+  const endTimeStr = String(endT.getHours()).padStart(2,'0') + ':' + String(endT.getMinutes()).padStart(2,'0');
+  const duration = calcDuration(startTimeStr, endTimeStr);
+
+  if (duration > 0) {
+    addRecord(todayStr(), startTimeStr, endTimeStr, timerState.task, timerState.desc);
+    toast('已保存：' + timerState.task + '（' + minToText(duration) + '）');
+  }
+  // 重置
+  timerState.running = false;
+  timerState.startTime = null;
+  timerState.task = '';
+  timerState.desc = '';
+  timerState.elapsed = 0;
+  document.getElementById('timerH').textContent = '00';
+  document.getElementById('timerM').textContent = '00';
+  document.getElementById('timerLabel').textContent = '点击「开始」记录当前时间，结束时点击「停止」自动计算耗时';
+  document.getElementById('timerStartBtn').style.display = 'inline-block';
+  document.getElementById('timerStopBtn').style.display = 'none';
+  document.getElementById('timerTask').value = '';
+  document.getElementById('timerDesc').value = '';
+}
+function formatNow(d) {
+  return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0') + ':' + String(d.getSeconds()).padStart(2,'0');
+}
+
+// ========================================
+//  添加记录（核心）
+// ========================================
+function addRecord(date, start, end, task, desc) {
+  if (!DB.records[date]) DB.records[date] = [];
+  DB.records[date].push({
+    id: uid(),
+    start: start,
+    end: end,
+    task: task,
+    desc: (desc || '').trim(),
+    duration: calcDuration(start, end)
+  });
+  // 按开始时间排序
+  DB.records[date].sort((a,b) => timeToMin(a.start) - timeToMin(b.start));
+  saveData(DB);
+  refreshTaskSuggestions();
+  renderToday();
+}
+
+// ========================================
+//  常用事项下拉补全（同一事项累计出现 ≥3 次自动收录，并可带入上次说明）
+// ========================================
+const TASK_FREQ_MIN = 3;
+let taskSuggestionData = { freq: {}, lastDesc: {} };
+
+function refreshTaskSuggestions() {
+  const freq = {};
+  const lastDesc = {};
+  for (const date in DB.records) {
+    for (const r of DB.records[date]) {
+      const t = (r.task || '').trim();
+      if (!t) continue;
+      freq[t] = (freq[t] || 0) + 1;
+      if (r.desc) lastDesc[t] = r.desc; // 保留最近一次非空说明
+    }
+  }
+  taskSuggestionData = { freq, lastDesc };
+  const frequent = Object.keys(freq)
+    .filter(t => freq[t] >= TASK_FREQ_MIN)
+    .sort((a, b) => freq[b] - freq[a]);
+  const dl = document.getElementById('taskSuggestions');
+  if (dl) dl.innerHTML = frequent.map(t => `<option value="${escapeHtml(t)}">`).join('');
+}
+
+// 选中/输入与历史完全一致的事项时，自动带入该事项上次填写的说明
+function attachTaskAutofill(taskId, descId) {
+  const taskEl = document.getElementById(taskId);
+  const descEl = document.getElementById(descId);
+  if (!taskEl || !descEl) return;
+  taskEl.addEventListener('change', () => {
+    const v = taskEl.value.trim();
+    if (v && !descEl.value.trim() && taskSuggestionData.lastDesc[v] !== undefined) {
+      descEl.value = taskSuggestionData.lastDesc[v];
+    }
+  });
+}
+
+// 手动添加
+function addManualRecord() {
+  const start = document.getElementById('addStart').value;
+  const end = document.getElementById('addEnd').value;
+  const task = document.getElementById('addTask').value.trim();
+  const desc = document.getElementById('addDesc').value.trim();
+  if (!task) { toast('请输入事项'); return; }
+  if (!start || !end) { toast('请选择起止时间'); return; }
+  const dur = calcDuration(start, end);
+  if (dur <= 0) { toast('结束时间需晚于开始时间'); return; }
+  addRecord(todayStr(), start, end, task, desc);
+  document.getElementById('addTask').value = '';
+  document.getElementById('addDesc').value = '';
+  toast('已添加：' + task + '（' + minToText(dur) + '）');
+}
+
+// 手动添加 — 实时显示耗时
+document.addEventListener('DOMContentLoaded', () => {
+  function updateHint() {
+    const s = document.getElementById('addStart').value;
+    const e = document.getElementById('addEnd').value;
+    if (s && e) {
+      const d = calcDuration(s, e);
+      document.getElementById('addDurationHint').textContent = '预计耗时：' + minToText(d);
+    }
+  }
+  document.getElementById('addStart').addEventListener('change', updateHint);
+  document.getElementById('addEnd').addEventListener('change', updateHint);
+  updateHint();
+  renderToday();
+  initSelectors();
+  refreshTaskSuggestions();
+  attachTaskAutofill('timerTask', 'timerDesc');
+  attachTaskAutofill('addTask', 'addDesc');
+});
+
+// 删除记录
+function deleteRecord(date, id) {
+  if (!DB.records[date]) return;
+  DB.records[date] = DB.records[date].filter(r => r.id !== id);
+  saveData(DB);
+  renderToday();
+  toast('已删除');
+}
+
+// ========================================
+//  渲染 — 今日
+// ========================================
+function renderToday() {
+  const date = todayStr();
+  const weekdays = ['日','一','二','三','四','五','六'];
+  const d = new Date();
+  document.getElementById('todayDateLabel').textContent =
+    (d.getMonth()+1) + '月' + d.getDate() + '日 周' + weekdays[d.getDay()];
+
+  const records = DB.records[date] || [];
+  const listEl = document.getElementById('todayList');
+  const statsEl = document.getElementById('todayStats');
+
+  // 统计
+  const totalMin = records.reduce((s,r) => s + r.duration, 0);
+  const taskCount = records.length;
+
+  statsEl.innerHTML = `
+    <div class="stat-box"><div class="stat-value">${minToText(totalMin)}</div><div class="stat-label">总耗时</div></div>
+    <div class="stat-box"><div class="stat-value">${taskCount}</div><div class="stat-label">记录数</div></div>
+    <div class="stat-box"><div class="stat-value">${taskCount > 0 ? minToText(Math.round(totalMin / taskCount)) : '0分'}</div><div class="stat-label">平均每项</div></div>
+  `;
+
+  // 列表
+  if (records.length === 0) {
+    listEl.innerHTML = '<div class="empty">暂无记录，开始添加你的第一条吧 🌟</div>';
+    return;
+  }
+  listEl.innerHTML = records.map(r => `
+    <li class="record-item">
+      <span class="record-time">${r.start} → ${r.end}</span>
+      <div class="record-main">
+        <span class="record-task">${escapeHtml(r.task)}</span>
+        ${r.desc ? `<div class="record-desc">${escapeHtml(r.desc)}</div>` : ''}
+      </div>
+      <span class="record-duration">${minToText(r.duration)}</span>
+      <button class="record-delete" onclick="deleteRecord('${date}','${r.id}')" title="删除">✕</button>
+    </li>
+  `).join('');
+}
+
+// ========================================
+//  渲染 — 每日总结
+// ========================================
+function renderDaily() {
+  const date = document.getElementById('dailyDate').value || todayStr();
+  document.getElementById('dailyDate').value = date;
+
+  const records = DB.records[date] || [];
+  const listEl = document.getElementById('dailyList');
+  const statsEl = document.getElementById('dailyStats');
+
+  const totalMin = records.reduce((s,r) => s + r.duration, 0);
+
+  statsEl.innerHTML = `
+    <div class="stat-box"><div class="stat-value">${minToText(totalMin)}</div><div class="stat-label">总耗时</div></div>
+    <div class="stat-box"><div class="stat-value">${records.length}</div><div class="stat-label">记录数</div></div>
+  `;
+
+  if (records.length === 0) {
+    listEl.innerHTML = '<div class="empty">该日期暂无记录</div>';
+  } else {
+    listEl.innerHTML = records.map(r => `
+      <li class="record-item">
+        <span class="record-time">${r.start} → ${r.end}</span>
+        <div class="record-main">
+          <span class="record-task">${escapeHtml(r.task)}</span>
+          ${r.desc ? `<div class="record-desc">${escapeHtml(r.desc)}</div>` : ''}
+        </div>
+        <span class="record-duration">${minToText(r.duration)}</span>
+      </li>
+    `).join('');
+  }
+
+  // 事项统计
+  renderTaskBreakdown(records, 'dailyTaskBreakdown');
+
+  // 反思
+  const reflection = (DB.reflections.daily[date] || '');
+  document.getElementById('dailyReflection').value = reflection;
+}
+function shiftDay(n) {
+  const input = document.getElementById('dailyDate');
+  const cur = input.value || todayStr();
+  input.value = addDays(cur, n);
+  renderDaily();
+}
+function dailyDateToToday() {
+  document.getElementById('dailyDate').value = todayStr();
+  renderDaily();
+}
+
+// ========================================
+//  渲染 — 每周总结
+// ========================================
+function renderWeekly() {
+  const weekKey = document.getElementById('weekSelect').value;
+  if (!weekKey) return;
+  const dates = getWeekDates(weekKey);
+  const weekdays = ['一','二','三','四','五','六','日'];
+
+  let totalMin = 0;
+  const dayData = dates.map((date, i) => {
+    const recs = DB.records[date] || [];
+    const dayTotal = recs.reduce((s,r) => s + r.duration, 0);
+    totalMin += dayTotal;
+    return { date, dayLabel: '周' + weekdays[i], total: dayTotal, count: recs.length };
+  });
+
+  const statsEl = document.getElementById('weeklyStats');
+  statsEl.innerHTML = `
+    <div class="stat-box"><div class="stat-value">${minToText(totalMin)}</div><div class="stat-label">本周总耗时</div></div>
+    <div class="stat-box"><div class="stat-value">${dayData.filter(d=>d.count>0).length}</div><div class="stat-label">有记录天数</div></div>
+    <div class="stat-box"><div class="stat-value">${dayData.reduce((s,d)=>s+d.count,0)}</div><div class="stat-label">总记录数</div></div>
+    <div class="stat-box"><div class="stat-value">${minToText(Math.round(totalMin / 7))}</div><div class="stat-label">日均耗时</div></div>
+  `;
+
+  // 柱状图
+  const maxVal = Math.max(...dayData.map(d => d.total), 1);
+  const chartEl = document.getElementById('weeklyChart');
+  chartEl.innerHTML = '<div style="font-size:13px;font-weight:600;margin:12px 0 6px;color:var(--text-light)">每日耗时分布</div>' +
+    '<div class="bar-chart">' +
+    dayData.map(d => `
+      <div class="bar-row">
+        <span class="bar-label">${d.dayLabel} ${d.date.slice(5)}</span>
+        <div class="bar-track"><div class="bar-fill" style="width:${(d.total / maxVal * 100)}%"></div></div>
+        <span class="bar-value">${minToText(d.total)}</span>
+      </div>
+    `).join('') +
+    '</div>';
+
+  // 事项统计
+  const weekRecords = [];
+  for (const date of dates) {
+    const recs = DB.records[date] || [];
+    weekRecords.push(...recs);
+  }
+  renderTaskBreakdown(weekRecords, 'weeklyTaskBreakdown');
+
+  // 反思
+  document.getElementById('weeklyReflection').value = DB.reflections.weekly[weekKey] || '';
+}
+function shiftWeek(n) {
+  const sel = document.getElementById('weekSelect');
+  const idx = sel.selectedIndex;
+  const newIdx = Math.max(0, Math.min(sel.options.length - 1, idx + n));
+  sel.selectedIndex = newIdx;
+  renderWeekly();
+}
+
+// ========================================
+//  渲染 — 每月总结
+// ========================================
+function renderMonthly() {
+  const monthKey = document.getElementById('monthSelect').value;
+  if (!monthKey) return;
+  const [year, month] = monthKey.split('-').map(Number);
+  const daysInMonth = new Date(year, month, 0).getDate();
+
+  let totalMin = 0;
+  let totalRecords = 0;
+  let activeDays = 0;
+  const dayData = [];
+
+  for (let day = 1; day <= daysInMonth; day++) {
+    const date = monthKey + '-' + String(day).padStart(2,'0');
+    const recs = DB.records[date] || [];
+    const dayTotal = recs.reduce((s,r) => s + r.duration, 0);
+    if (recs.length > 0) activeDays++;
+    totalMin += dayTotal;
+    totalRecords += recs.length;
+    if (dayTotal > 0) dayData.push({ day: day, total: dayTotal });
+  }
+
+  const statsEl = document.getElementById('monthlyStats');
+  statsEl.innerHTML = `
+    <div class="stat-box"><div class="stat-value">${minToText(totalMin)}</div><div class="stat-label">本月总耗时</div></div>
+    <div class="stat-box"><div class="stat-value">${activeDays}</div><div class="stat-label">有记录天数</div></div>
+    <div class="stat-box"><div class="stat-value">${totalRecords}</div><div class="stat-label">总记录数</div></div>
+    <div class="stat-box"><div class="stat-value">${minToText(Math.round(totalMin / daysInMonth))}</div><div class="stat-label">日均耗时</div></div>
+  `;
+
+  // 柱状图 — 按天
+  const chartEl = document.getElementById('monthlyChart');
+  if (dayData.length === 0) {
+    chartEl.innerHTML = '<div class="empty">本月暂无记录</div>';
+  } else {
+    const maxVal = Math.max(...dayData.map(d => d.total), 1);
+    // 按周分组显示更清晰，这里直接按天
+    chartEl.innerHTML = '<div style="font-size:13px;font-weight:600;margin:12px 0 6px;color:var(--text-light)">每日耗时分布</div>' +
+      '<div class="bar-chart" style="max-height:300px;overflow-y:auto">' +
+      dayData.map(d => `
+        <div class="bar-row">
+          <span class="bar-label">${month}月${d.day}日</span>
+          <div class="bar-track"><div class="bar-fill" style="width:${(d.total / maxVal * 100)}%"></div></div>
+          <span class="bar-value">${minToText(d.total)}</span>
+        </div>
+      `).join('') +
+      '</div>';
+  }
+
+  // 事项统计
+  const monthRecords = [];
+  for (let day = 1; day <= daysInMonth; day++) {
+    const date = monthKey + '-' + String(day).padStart(2,'0');
+    const recs = DB.records[date] || [];
+    monthRecords.push(...recs);
+  }
+  renderTaskBreakdown(monthRecords, 'monthlyTaskBreakdown');
+
+  // 反思
+  document.getElementById('monthlyReflection').value = DB.reflections.monthly[monthKey] || '';
+}
+function shiftMonth(n) {
+  const sel = document.getElementById('monthSelect');
+  const idx = sel.selectedIndex;
+  const newIdx = Math.max(0, Math.min(sel.options.length - 1, idx + n));
+  sel.selectedIndex = newIdx;
+  renderMonthly();
+}
+
+// ========================================
+//  事项统计 — 通用渲染（按事项名分组）
+// ========================================
+const TASK_COLORS = [
+  '#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981',
+  '#06b6d4', '#3b82f6', '#ef4444', '#84cc16', '#f97316',
+  '#a855f7', '#14b8a6', '#64748b', '#eab308', '#6366f1'
+];
+
+function aggregateTasks(records) {
+  const map = new Map();
+  for (const r of records) {
+    if (!map.has(r.task)) {
+      map.set(r.task, { name: r.task, totalMin: 0, count: 0, dates: new Set() });
+    }
+    const t = map.get(r.task);
+    t.totalMin += r.duration;
+    t.count++;
+  }
+  return Array.from(map.values()).sort((a,b) => b.totalMin - a.totalMin);
+}
+
+function renderTaskBreakdown(records, containerId) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  if (records.length === 0) {
+    el.innerHTML = '';
+    return;
+  }
+  const tasks = aggregateTasks(records);
+  const totalMin = tasks.reduce((s,t) => s + t.totalMin, 0);
+  const maxMin = Math.max(...tasks.map(t => t.totalMin), 1);
+
+  el.innerHTML = '<div class="task-bd">' +
+    '<div class="task-bd-title">📌 事项耗时分布</div>' +
+    tasks.map((t, i) => {
+      const pct = totalMin > 0 ? Math.round(t.totalMin / totalMin * 100) : 0;
+      const color = TASK_COLORS[i % TASK_COLORS.length];
+      return `
+        <div class="task-bd-row">
+          <span class="task-bd-name" title="${escapeHtml(t.name)}">${escapeHtml(t.name)}</span>
+          <div class="task-bd-track">
+            <div class="task-bd-fill" style="width:${(t.totalMin / maxMin * 100)}%;background:${color}"></div>
+            <span class="task-bd-pct">${pct}%</span>
+          </div>
+          <div class="task-bd-info">
+            <div class="task-bd-time">${minToText(t.totalMin)}</div>
+            <div class="task-bd-count">${t.count}次</div>
+          </div>
+        </div>
+      `;
+    }).join('') +
+    '</div>';
+}
+
+// ========================================
+//  任务统计 — 全局排行
+// ========================================
+function renderStats() {
+  const range = document.getElementById('statsRange').value;
+  const allRecords = [];
+  const today = todayStr();
+
+  for (const [date, recs] of Object.entries(DB.records || {})) {
+    let include = false;
+    if (range === 'all') {
+      include = true;
+    } else if (range === 'month') {
+      include = date.slice(0, 7) === today.slice(0, 7);
+    } else if (range === 'week') {
+      include = getWeekKey(date) === getWeekKey(today);
+    } else if (range === '7d') {
+      const diff = (new Date(today) - new Date(date)) / 86400000;
+      include = diff >= 0 && diff < 7;
+    } else if (range === '30d') {
+      const diff = (new Date(today) - new Date(date)) / 86400000;
+      include = diff >= 0 && diff < 30;
+    }
+    if (include) {
+      for (const r of recs) allRecords.push({ ...r, date });
+    }
+  }
+
+  const tasks = aggregateTasks(allRecords);
+  const totalMin = tasks.reduce((s,t) => s + t.totalMin, 0);
+  const totalCount = tasks.reduce((s,t) => s + t.count, 0);
+
+  // 汇总卡片
+  const summaryEl = document.getElementById('statsSummary');
+  const topTask = tasks[0];
+  const freqTask = tasks.length > 0 ? tasks.slice().sort((a,b) => b.count - a.count)[0] : null;
+
+  summaryEl.innerHTML = `
+    <div class="stat-box"><div class="stat-value">${tasks.length}</div><div class="stat-label">事项种类</div></div>
+    <div class="stat-box"><div class="stat-value">${minToText(totalMin)}</div><div class="stat-label">总耗时</div></div>
+    <div class="stat-box"><div class="stat-value">${totalCount}</div><div class="stat-label">总记录数</div></div>
+    <div class="stat-box"><div class="stat-value" style="font-size:16px">${topTask ? escapeHtml(topTask.name).slice(0,6) : '-'}</div><div class="stat-label">最耗时事项</div></div>
+    <div class="stat-box"><div class="stat-value" style="font-size:16px">${freqTask ? escapeHtml(freqTask.name).slice(0,6) : '-'}</div><div class="stat-label">最高频事项</div></div>
+  `;
+
+  // 排行榜
+  const rankingEl = document.getElementById('statsRanking');
+  if (tasks.length === 0) {
+    rankingEl.innerHTML = '<div class="empty">所选范围内暂无记录</div>';
+    return;
+  }
+
+  const maxMin = Math.max(...tasks.map(t => t.totalMin), 1);
+  rankingEl.innerHTML = '<div style="font-size:14px;font-weight:600;margin:16px 0 10px">🏆 事项耗时排行榜</div>' +
+    '<div>' +
+    tasks.map((t, i) => {
+      const pct = totalMin > 0 ? Math.round(t.totalMin / totalMin * 100) : 0;
+      const color = TASK_COLORS[i % TASK_COLORS.length];
+      const rankClass = i === 0 ? 'rank-1' : i === 1 ? 'rank-2' : i === 2 ? 'rank-3' : 'rank-other';
+      const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i + 1);
+      return `
+        <div class="task-bd-row" style="margin-bottom:10px">
+          <div class="rank-badge ${rankClass}">${medal}</div>
+          <span class="task-bd-name" style="width:130px" title="${escapeHtml(t.name)}">${escapeHtml(t.name)}</span>
+          <div class="task-bd-track">
+            <div class="task-bd-fill" style="width:${(t.totalMin / maxMin * 100)}%;background:${color}"></div>
+            <span class="task-bd-pct">${pct}%</span>
+          </div>
+          <div class="task-bd-info">
+            <div class="task-bd-time">${minToText(t.totalMin)}</div>
+            <div class="task-bd-count">${t.count}次 · 均${minToText(Math.round(t.totalMin / t.count))}</div>
+          </div>
+        </div>
+      `;
+    }).join('') +
+    '</div>';
+}
+
+// ========================================
+//  反思保存
+// ========================================
+let saveTimer = {};
+function saveReflection(type, value) {
+  clearTimeout(saveTimer[type]);
+  saveTimer[type] = setTimeout(() => {
+    if (type === 'daily') {
+      const date = document.getElementById('dailyDate').value;
+      DB.reflections.daily[date] = value;
+    } else if (type === 'weekly') {
+      const weekKey = document.getElementById('weekSelect').value;
+      DB.reflections.weekly[weekKey] = value;
+    } else if (type === 'monthly') {
+      const monthKey = document.getElementById('monthSelect').value;
+      DB.reflections.monthly[monthKey] = value;
+    }
+    saveData(DB);
+    const hint = document.getElementById(type + 'SaveHint');
+    hint.classList.add('show');
+    setTimeout(() => hint.classList.remove('show'), 1500);
+  }, 600);
+}
+
+// ========================================
+//  下拉选择器初始化
+// ========================================
+function initSelectors() {
+  // 日期选择器
+  document.getElementById('dailyDate').value = todayStr();
+
+  // 周选择器 — 生成最近 12 周
+  const weekSel = document.getElementById('weekSelect');
+  const today = new Date();
+  const thisMonday = getMonday(today);
+  for (let i = 11; i >= 0; i--) {
+    const mon = new Date(thisMonday);
+    mon.setDate(mon.getDate() - i * 7);
+    const key = mon.getFullYear() + '-' + String(mon.getMonth()+1).padStart(2,'0') + '-' + String(mon.getDate()).padStart(2,'0');
+    const opt = document.createElement('option');
+    opt.value = key;
+    opt.textContent = weekRangeText(key) + (i === 0 ? '（本周）' : '');
+    weekSel.appendChild(opt);
+  }
+  weekSel.value = thisMonday.getFullYear() + '-' + String(thisMonday.getMonth()+1).padStart(2,'0') + '-' + String(thisMonday.getDate()).padStart(2,'0');
+
+  // 月选择器 — 生成最近 12 个月
+  const monthSel = document.getElementById('monthSelect');
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+    const key = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+    const opt = document.createElement('option');
+    opt.value = key;
+    opt.textContent = d.getFullYear() + '年' + (d.getMonth()+1) + '月' + (i === 0 ? '（本月）' : '');
+    monthSel.appendChild(opt);
+  }
+  monthSel.value = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0');
+}
+
+// ========================================
+//  导入 / 导出
+// ========================================
+function exportData() {
+  const data = JSON.stringify(DB, null, 2);
+  const blob = new Blob([data], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = '时间记录_备份_' + todayStr() + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('已导出备份文件');
+}
+function importData(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (!data.records || !data.reflections) throw new Error('格式不对');
+      if (!confirm('导入将覆盖当前所有数据，确定继续？')) return;
+      DB = data;
+      saveData(DB);
+      renderToday();
+      renderDaily();
+      renderWeekly();
+      renderMonthly();
+      toast('导入成功');
+    } catch(err) {
+      toast('导入失败：文件格式不正确');
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = ''; // 重置以便重复导入同名文件
+}
+
+// ========================================
+//  HTML 转义
+// ========================================
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// ========================================
+//  键盘快捷键：Enter 添加手动记录
+// ========================================
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && e.target.id === 'addTask') {
+    addManualRecord();
+  }
+});
+
+// ========================================
+//  云同步 — 基于 jsonblob.com（免费、无需注册）
+// ========================================
+const SYNC_API = 'https://jsonblob.com/api/jsonBlob';
+let syncState = { code: null, lastSync: 0, intervalId: null };
+
+function loadSyncState() {
+  try {
+    const saved = localStorage.getItem('timeTrackerSync');
+    if (saved) syncState = JSON.parse(saved);
+  } catch(e) {}
+}
+function saveSyncState() {
+  localStorage.setItem('timeTrackerSync', JSON.stringify({ code: syncState.code, lastSync: syncState.lastSync }));
+}
+
+function initSync() {
+  loadSyncState();
+  // 检查 URL 是否带同步码
+  const params = new URLSearchParams(location.search);
+  const urlCode = params.get('sync');
+  if (urlCode) {
+    syncState.code = urlCode;
+    saveSyncState();
+    // 清除 URL 中的同步码
+    history.replaceState(null, '', location.pathname);
+    downloadSync().then(() => {
+      renderAll();
+      toast('已连接云同步');
+    });
+    startAutoSync();
+  } else if (syncState.code) {
+    startAutoSync();
+    // 启动时下载一次
+    downloadSync().then(() => renderAll());
+  }
+  updateSyncBtn();
+}
+
+function updateSyncBtn() {
+  const btn = document.getElementById('syncBtn');
+  if (syncState.code) {
+    btn.textContent = '☁️ 已同步';
+    btn.style.background = 'rgba(255,255,255,0.28)';
+  } else {
+    btn.textContent = '☁️ 云同步';
+    btn.style.background = '';
+  }
+}
+
+function openSyncModal() {
+  document.getElementById('syncOverlay').classList.add('show');
+  renderSyncModal();
+}
+function closeSyncModal() {
+  document.getElementById('syncOverlay').classList.remove('show');
+}
+
+function renderSyncModal() {
+  const body = document.getElementById('syncModalBody');
+  if (syncState.code) {
+    // 已连接
+    const syncUrl = location.origin + location.pathname + '?sync=' + syncState.code;
+    const lastTime = syncState.lastSync ? new Date(syncState.lastSync).toLocaleTimeString('zh-CN') : '尚未同步';
+    body.innerHTML = `
+      <div class="sync-status-row">
+        <span class="sync-dot"></span>
+        <span>云同步已开启 · 上次同步：${lastTime}</span>
+      </div>
+      <div class="sync-info">
+        💡 在手机浏览器打开以下链接，即可自动连接同步：<br>
+        <strong>两台设备访问同一个链接，数据自动保持一致</strong>
+      </div>
+      <div class="sync-link-box">
+        <input type="text" value="${syncUrl}" id="syncLinkInput" readonly
+          style="width:100%;border:none;background:transparent;font-size:12px;color:var(--primary);font-family:monospace;outline:none">
+      </div>
+      <div class="sync-btn-row">
+        <button class="btn btn-primary btn-sm" onclick="copySyncLink()">复制链接</button>
+        <button class="btn btn-ghost btn-sm" onclick="syncNow()">立即同步</button>
+        <button class="btn btn-ghost btn-sm" style="color:var(--danger);margin-left:auto" onclick="stopSync()">关闭同步</button>
+      </div>
+    `;
+  } else {
+    // 未连接
+    body.innerHTML = `
+      <div class="sync-info">
+        ☁️ 开启云同步后，可以在手机和电脑之间自动同步数据。<br><br>
+        <strong>使用方法：</strong><br>
+        1. 在当前设备点击「开启云同步」<br>
+        2. 复制生成的链接，在另一台设备浏览器打开<br>
+        3. 两台设备数据自动保持一致<br><br>
+        <span style="color:var(--text-light);font-size:12px">数据通过加密通道传输，无需注册账号。建议同时使用「导出备份」定期保存。</span>
+      </div>
+      <button class="btn btn-primary" style="width:100%" onclick="enableSync()">开启云同步</button>
+      <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
+        <div style="font-size:13px;color:var(--text-light);margin-bottom:8px">已有同步码？直接输入：</div>
+        <div class="sync-input-row">
+          <input type="text" id="joinSyncInput" placeholder="粘贴同步码或同步链接">
+          <button class="btn btn-ghost btn-sm" onclick="joinSync()">连接</button>
+        </div>
+      </div>
+    `;
+  }
+}
+
+function copySyncLink() {
+  const input = document.getElementById('syncLinkInput');
+  input.select();
+  document.execCommand('copy');
+  toast('链接已复制，发给手机打开即可');
+}
+
+async function enableSync() {
+  try {
+    toast('正在创建云端存储...');
+    const data = { ...DB, lastModified: Date.now() };
+    const resp = await fetch(SYNC_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    // 从 Location 头获取 blob ID
+    const location = resp.headers.get('Location') || resp.headers.get('location');
+    let code = null;
+    if (location) {
+      code = location.split('/').pop();
+    } else {
+      // 某些浏览器不支持读取 Location 头（CORS），尝试从响应体获取
+      const text = await resp.text();
+      try {
+        const json = JSON.parse(text);
+        code = json.id || json.uri || json;
+        if (typeof code === 'string' && code.includes('/')) code = code.split('/').pop();
+      } catch(e) {
+        code = text.trim().split('/').pop();
+      }
+    }
+    if (code) {
+      syncState.code = code;
+      syncState.lastSync = Date.now();
+      saveSyncState();
+      startAutoSync();
+      updateSyncBtn();
+      renderSyncModal();
+      toast('云同步已开启！');
+    } else {
+      throw new Error('未获取到同步码');
+    }
+  } catch(e) {
+    console.error('开启云同步失败', e);
+    toast('开启失败，可能网络问题或浏览器限制');
+  }
+}
+
+async function joinSync() {
+  const input = document.getElementById('joinSyncInput').value.trim();
+  if (!input) { toast('请输入同步码或链接'); return; }
+  // 从链接或纯码中提取同步码
+  let code = input;
+  if (code.includes('sync=')) {
+    code = new URL(code).searchParams.get('sync');
+  } else if (code.includes('/')) {
+    code = code.split('/').pop();
+  }
+  syncState.code = code;
+  saveSyncState();
+  try {
+    toast('正在连接...');
+    await downloadSync();
+    renderAll();
+    startAutoSync();
+    updateSyncBtn();
+    renderSyncModal();
+    toast('连接成功，数据已同步');
+  } catch(e) {
+    syncState.code = null;
+    saveSyncState();
+    toast('连接失败，请检查同步码是否正确');
+  }
+}
+
+async function uploadSync() {
+  if (!syncState.code) return;
+  try {
+    const data = { ...DB, lastModified: Date.now() };
+    delete data._redirect; // 上传时清除重定向标记
+    await fetch(SYNC_API + '/' + syncState.code, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    syncState.lastSync = Date.now();
+    saveSyncState();
+  } catch(e) {
+    console.error('上传失败', e);
+  }
+}
+
+async function downloadSync() {
+  if (!syncState.code) return;
+  try {
+    let code = syncState.code;
+    // 跟随重定向链（最多5跳，处理 blob 续期）
+    for (let hop = 0; hop < 5; hop++) {
+      const resp = await fetch(SYNC_API + '/' + code, { headers: { 'Accept': 'application/json' } });
+      if (resp.status === 404 || resp.status === 410) {
+        // Blob 已过期
+        if (code === syncState.code) {
+          await recreateSync();
+        }
+        return;
+      }
+      if (!resp.ok) return;
+      const cloudData = await resp.json();
+      // 检查是否有重定向（说明云端已续期到新 blob）
+      if (cloudData._redirect) {
+        code = cloudData._redirect;
+        syncState.code = code;
+        saveSyncState();
+        continue; // 继续跟随
+      }
+      // 没有 _redirect，这是最终数据
+      const cloudTime = cloudData.lastModified || 0;
+      const localTimeVal = DB.lastModified || 0;
+      if (cloudTime > localTimeVal) {
+        DB = mergeData(DB, cloudData);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(DB));
+        renderAll();
+      }
+      syncState.lastSync = Date.now();
+      saveSyncState();
+      // 检查是否需要续期（距过期不足4小时）
+      const expiresAt = resp.headers.get('X-jsonblob-expires-at');
+      if (expiresAt) {
+        const msLeft = new Date(expiresAt).getTime() - Date.now();
+        if (msLeft < 4 * 3600 * 1000 && msLeft > 0) {
+          await renewSync(code);
+        }
+      }
+      return;
+    }
+  } catch(e) {
+    console.error('下载失败', e);
+  }
+}
+
+// 续期：创建新 blob，在旧 blob 上留重定向标记
+async function renewSync(oldCode) {
+  try {
+    const data = { ...DB, lastModified: Date.now() };
+    delete data._redirect;
+    const resp = await fetch(SYNC_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    const location = resp.headers.get('Location') || resp.headers.get('location');
+    if (!location) return;
+    const newCode = location.split('/').pop();
+    // 在旧 blob 上标记重定向
+    await fetch(SYNC_API + '/' + oldCode, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...data, _redirect: newCode })
+    });
+    syncState.code = newCode;
+    syncState.lastSync = Date.now();
+    saveSyncState();
+    updateSyncBtn();
+  } catch(e) { console.error('续期失败', e); }
+}
+
+// 重建：blob 已过期，从本地数据创建新的
+async function recreateSync() {
+  try {
+    const data = { ...DB, lastModified: Date.now() };
+    delete data._redirect;
+    const resp = await fetch(SYNC_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    const location = resp.headers.get('Location') || resp.headers.get('location');
+    if (location) {
+      syncState.code = location.split('/').pop();
+      syncState.lastSync = Date.now();
+      saveSyncState();
+      updateSyncBtn();
+      toast('同步已自动续期，请在其他设备重新连接');
+    }
+  } catch(e) { console.error('重建失败', e); }
+}
+
+// 合并数据：以记录 ID 去重，取并集
+function mergeData(local, cloud) {
+  if (!cloud || !cloud.records) return local;
+  const merged = { records: {}, reflections: { daily:{}, weekly:{}, monthly:{} }, reminders: [] };
+  // 合并 records：按日期 + 记录 ID 去重
+  const allDates = new Set([...Object.keys(local.records || {}), ...Object.keys(cloud.records || {})]);
+  for (const date of allDates) {
+    const localRecs = local.records[date] || [];
+    const cloudRecs = cloud.records[date] || [];
+    const recMap = new Map();
+    for (const r of localRecs) recMap.set(r.id, r);
+    for (const r of cloudRecs) recMap.set(r.id, r);
+    merged.records[date] = Array.from(recMap.values()).sort((a,b) => timeToMin(a.start) - timeToMin(b.start));
+  }
+  // 合并 reflections：云端优先（最后修改的覆盖）
+  for (const type of ['daily','weekly','monthly']) {
+    const localR = (local.reflections && local.reflections[type]) || {};
+    const cloudR = (cloud.reflections && cloud.reflections[type]) || {};
+    const keys = new Set([...Object.keys(localR), ...Object.keys(cloudR)]);
+    for (const k of keys) {
+      merged.reflections[type][k] = cloudR[k] !== undefined ? cloudR[k] : localR[k];
+    }
+  }
+  // 合并 reminders：按 ID 去重，云端优先（已通知/已完成状态取 true）
+  const remMap = new Map();
+  for (const r of (local.reminders || [])) remMap.set(r.id, r);
+  for (const r of (cloud.reminders || [])) {
+    const exist = remMap.get(r.id);
+    if (exist) {
+      remMap.set(r.id, {
+        ...exist, ...r,
+        notified: exist.notified || r.notified,
+        done: exist.done || r.done
+      });
+    } else {
+      remMap.set(r.id, r);
+    }
+  }
+  merged.reminders = Array.from(remMap.values()).sort((a,b) => (a.datetime||'').localeCompare(b.datetime||''));
+  merged.lastModified = Math.max(localTime(cloud), localTime(local));
+  return merged;
+}
+function localTime(obj) { return obj.lastModified || 0; }
+
+function startAutoSync() {
+  if (syncState.intervalId) clearInterval(syncState.intervalId);
+  syncState.intervalId = setInterval(async () => {
+    const localModified = DB.lastModified || 0;
+    await downloadSync(); // 下载会跟随重定向 + 自动续期
+    // 如果本地比上次同步后有更新，上传
+    if (localModified > syncState.lastSync - 1000) {
+      await uploadSync();
+    }
+  }, 8000); // 每8秒同步一次
+}
+
+function stopSync() {
+  if (syncState.intervalId) clearInterval(syncState.intervalId);
+  syncState = { code: null, lastSync: 0, intervalId: null };
+  localStorage.removeItem('timeTrackerSync');
+  updateSyncBtn();
+  renderSyncModal();
+  toast('云同步已关闭（本地数据不受影响）');
+}
+
+async function syncNow() {
+  toast('正在同步...');
+  await uploadSync();
+  await downloadSync();
+  renderSyncModal();
+  toast('同步完成');
+}
+
+function renderAll() {
+  renderToday();
+  // 如果其他 tab 可见也刷新
+  if (document.getElementById('section-daily').classList.contains('active')) renderDaily();
+  if (document.getElementById('section-weekly').classList.contains('active')) renderWeekly();
+  if (document.getElementById('section-monthly').classList.contains('active')) renderMonthly();
+  if (document.getElementById('section-stats').classList.contains('active')) renderStats();
+  if (document.getElementById('section-reminder').classList.contains('active')) renderReminders();
+  refreshTaskSuggestions();
+}
+
+// ========================================
+//  定时提醒
+// ========================================
+function updateReminderPermBox() {
+  const box = document.getElementById('reminderPermBox');
+  const txt = document.getElementById('reminderPermText');
+  const btn = document.getElementById('reminderPermBtn');
+  if (!('Notification' in window)) {
+    box.style.display = 'flex';
+    txt.textContent = '当前浏览器不支持桌面通知，提醒时间到了会在页面内提示。';
+    btn.style.display = 'none';
+    return;
+  }
+  if (Notification.permission === 'granted') {
+    box.style.display = 'none';
+  } else if (Notification.permission === 'denied') {
+    box.style.display = 'flex';
+    txt.textContent = '通知权限已被拒绝，提醒只会在页面内提示。请在浏览器设置中允许通知。';
+    btn.style.display = 'none';
+  } else {
+    box.style.display = 'flex';
+    txt.textContent = '未开启通知，提醒时间到了可能无法弹出。';
+    btn.style.display = 'inline-block';
+  }
+}
+
+function requestNotifyPerm() {
+  if (!('Notification' in window)) return;
+  Notification.requestPermission().then(p => {
+    updateReminderPermBox();
+    if (p === 'granted') toast('已开启提醒通知');
+  });
+}
+
+function addReminder() {
+  const title = document.getElementById('remTitle').value.trim();
+  const dt = document.getElementById('remDatetime').value;
+  const note = document.getElementById('remNote').value.trim();
+  if (!title) { toast('请填写提醒事项'); return; }
+  if (!dt) { toast('请选择提醒时间'); return; }
+  DB.reminders.push({
+    id: uid(),
+    title: title,
+    datetime: dt,
+    note: note,
+    done: false,
+    notified: false,
+    created: Date.now()
+  });
+  saveData(DB);
+  document.getElementById('remTitle').value = '';
+  document.getElementById('remDatetime').value = '';
+  document.getElementById('remNote').value = '';
+  renderReminders();
+  toast('提醒已添加');
+}
+
+function deleteReminder(id) {
+  DB.reminders = DB.reminders.filter(r => r.id !== id);
+  saveData(DB);
+  renderReminders();
+  toast('已删除');
+}
+
+function completeReminder(id) {
+  const r = DB.reminders.find(r => r.id === id);
+  if (r) {
+    r.done = true;
+    saveData(DB);
+    renderReminders();
+  }
+}
+
+function fmtReminderDate(dtStr) {
+  const d = new Date(dtStr);
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0') +
+    ' ' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+}
+
+function fmtCountdown(targetTs) {
+  const diff = targetTs - Date.now();
+  if (diff <= 0) return '已到时间';
+  const days = Math.floor(diff / 86400000);
+  const hours = Math.floor((diff % 86400000) / 3600000);
+  const mins = Math.floor((diff % 3600000) / 60000);
+  if (days > 0) return '还有 ' + days + '天 ' + hours + '小时';
+  if (hours > 0) return '还有 ' + hours + '小时 ' + mins + '分钟';
+  return '还有 ' + mins + '分钟';
+}
+
+function renderReminders() {
+  updateReminderPermBox();
+  const now = Date.now();
+  const upcoming = [];
+  const done = [];
+  for (const r of DB.reminders) {
+    const ts = new Date(r.datetime).getTime();
+    if (r.done || (ts < now && r.notified)) done.push(r);
+    else upcoming.push(r);
+  }
+  upcoming.sort((a,b) => new Date(a.datetime) - new Date(b.datetime));
+  done.sort((a,b) => new Date(b.datetime) - new Date(a.datetime));
+
+  const upEl = document.getElementById('remUpcoming');
+  const doneEl = document.getElementById('remDone');
+
+  if (upcoming.length === 0) {
+    upEl.innerHTML = '<div class="reminder-empty">暂无待提醒事项，在上方添加</div>';
+  } else {
+    upEl.innerHTML = upcoming.map(r => {
+      const ts = new Date(r.datetime).getTime();
+      const urgent = ((ts - now) < 3600000 && ts > now) || (ts < now && !r.notified);
+      const cls = urgent ? 'reminder-item urgent' : 'reminder-item';
+      const noteHtml = r.note ? '<div class="reminder-meta">' + escapeHtml(r.note) + '</div>' : '';
+      return '<div class="' + cls + '">' +
+        '<div class="reminder-main">' +
+          '<div class="reminder-title">' + escapeHtml(r.title) + '</div>' +
+          '<div class="reminder-meta">' + fmtReminderDate(r.datetime) + '</div>' +
+          noteHtml +
+          '<div class="reminder-countdown">' + fmtCountdown(ts) + '</div>' +
+        '</div>' +
+        '<div class="reminder-actions">' +
+          '<button class="btn-done" onclick="completeReminder(\'' + r.id + '\')">完成</button>' +
+          '<button class="btn-del" onclick="deleteReminder(\'' + r.id + '\')">删除</button>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  if (done.length === 0) {
+    doneEl.innerHTML = '<div class="reminder-empty">暂无记录</div>';
+  } else {
+    doneEl.innerHTML = done.slice(0, 50).map(r => {
+      const noteHtml = r.note ? '<div class="reminder-meta">' + escapeHtml(r.note) + '</div>' : '';
+      return '<div class="reminder-item done">' +
+        '<div class="reminder-main">' +
+          '<div class="reminder-title">' + escapeHtml(r.title) + '</div>' +
+          '<div class="reminder-meta">' + fmtReminderDate(r.datetime) + (r.done ? ' · 已完成' : ' · 已过期') + '</div>' +
+          noteHtml +
+        '</div>' +
+        '<div class="reminder-actions">' +
+          '<button class="btn-del" onclick="deleteReminder(\'' + r.id + '\')">删除</button>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+  }
+}
+
+function checkReminders() {
+  const now = Date.now();
+  let changed = false;
+  for (const r of DB.reminders) {
+    if (r.done || r.notified) continue;
+    const ts = new Date(r.datetime).getTime();
+    if (ts <= now) {
+      r.notified = true;
+      changed = true;
+      if ('Notification' in window && Notification.permission === 'granted') {
+        try {
+          new Notification('⏰ 提醒：' + r.title, {
+            body: (r.note ? r.note + ' | ' : '') + fmtReminderDate(r.datetime),
+            tag: r.id
+          });
+        } catch(e) { console.error(e); }
+      }
+      toast('⏰ ' + r.title + '（' + fmtReminderDate(r.datetime) + '）');
+    }
+  }
+  if (changed) saveData(DB);
+  if (document.getElementById('section-reminder').classList.contains('active')) renderReminders();
+}
+
+// 启动云同步
+initSync();
+
+// 启动提醒检查（每30秒）+ 立即检查一次
+setInterval(checkReminders, 30000);
+checkReminders();
+</script>
+</body>
+</html>
