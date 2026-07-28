@@ -317,6 +317,20 @@
     word-break: break-all;
   }
   .record-desc::before { content: '📝 '; }
+  .detail-heading {
+    font-size: 13px;
+    font-weight: 600;
+    margin: 16px 0 6px;
+    color: var(--text-light);
+  }
+  .record-detail-list {
+    max-height: 320px;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 4px 2px;
+    background: #fff;
+  }
   .record-duration {
     font-variant-numeric: tabular-nums;
     font-size: 14px;
@@ -856,6 +870,7 @@
       <div class="stats-grid" id="weeklyStats"></div>
       <div id="weeklyChart"></div>
       <div id="weeklyTaskBreakdown"></div>
+      <div id="weeklyRecords"></div>
 
       <div class="reflection-box">
         <label>📝 本周总结与反思</label>
@@ -877,6 +892,7 @@
       <div class="stats-grid" id="monthlyStats"></div>
       <div id="monthlyChart"></div>
       <div id="monthlyTaskBreakdown"></div>
+      <div id="monthlyRecords"></div>
 
       <div class="reflection-box">
         <label>📝 本月总结与反思</label>
@@ -1398,9 +1414,10 @@ function renderWeekly() {
   const weekRecords = [];
   for (const date of dates) {
     const recs = DB.records[date] || [];
-    weekRecords.push(...recs);
+    for (const r of recs) weekRecords.push({ ...r, date });
   }
   renderTaskBreakdown(weekRecords, 'weeklyTaskBreakdown');
+  renderRecordDetail(weekRecords, 'weeklyRecords');
 
   // 反思
   document.getElementById('weeklyReflection').value = DB.reflections.weekly[weekKey] || '';
@@ -1469,12 +1486,38 @@ function renderMonthly() {
   for (let day = 1; day <= daysInMonth; day++) {
     const date = monthKey + '-' + String(day).padStart(2,'0');
     const recs = DB.records[date] || [];
-    monthRecords.push(...recs);
+    for (const r of recs) monthRecords.push({ ...r, date });
   }
   renderTaskBreakdown(monthRecords, 'monthlyTaskBreakdown');
+  renderRecordDetail(monthRecords, 'monthlyRecords');
 
   // 反思
   document.getElementById('monthlyReflection').value = DB.reflections.monthly[monthKey] || '';
+}
+
+// 记录明细（带说明）—— 用于周/月总结，方便对照说明写反思
+function renderRecordDetail(records, containerId) {
+  const el = document.getElementById(containerId);
+  if (!records || records.length === 0) {
+    el.innerHTML = '<div class="detail-heading">📋 记录明细（含说明）</div><div class="empty">本期暂无记录</div>';
+    return;
+  }
+  const sorted = [...records].sort((a, b) => {
+    const da = a.date || '', db = b.date || '';
+    if (da !== db) return da < db ? -1 : 1;
+    return timeToMin(a.start) - timeToMin(b.start);
+  });
+  el.innerHTML = '<div class="detail-heading">📋 记录明细（含说明）</div><ul class="record-list record-detail-list">' +
+    sorted.map(r => `
+      <li class="record-item">
+        <span class="record-time">${(r.date || '').slice(5)} ${r.start} → ${r.end}</span>
+        <div class="record-main">
+          <span class="record-task">${escapeHtml(r.task)}</span>
+          ${r.desc ? `<div class="record-desc">${escapeHtml(r.desc)}</div>` : ''}
+        </div>
+        <span class="record-duration">${minToText(r.duration)}</span>
+      </li>
+    `).join('') + '</ul>';
 }
 function shiftMonth(n) {
   const sel = document.getElementById('monthSelect');
